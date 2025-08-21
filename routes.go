@@ -23,7 +23,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	r.POST("/onlineNum", func(c *gin.Context) {
 		var data struct {
 			GameSvrID int `json:"gamesvrID" form:"gamesvrID" binding:"required"`
-			OnlineNum int `json:"onlineNum" form:"onlineNum" binding:"required"`
+			OnlineNum int `json:"onlineNum" form:"onlineNum" binding:"gte=0"`
 		}
 		if err := c.ShouldBind(&data); err != nil {
 			appLogger.Error(fmt.Sprintf("在线人数上报参数错误: %v", err))
@@ -114,7 +114,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			RoleID   string `json:"roleid" form:"roleid" binding:"required"`
 			GameSvr  int    `json:"gamesvr" form:"gamesvr" binding:"required"`
 			Money    int    `json:"money" form:"money" binding:"required"`
-			VipLevel int    `json:"viplevel" form:"viplevel" binding:"required"`
+			VipLevel int    `json:"viplevel" form:"viplevel" binding:"gte=0"`
 		}
 		if err := c.ShouldBind(&data); err != nil {
 			appLogger.Error(fmt.Sprintf("支付上报参数错误: %v", err))
