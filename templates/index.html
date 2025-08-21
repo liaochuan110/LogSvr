@@ -103,6 +103,42 @@
             border: 1px solid #e9ecef;
             box-sizing: border-box;
         }
+        .rank-container {
+            margin-top: 50px;
+        }
+        .rank-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+        }
+        .rank-table th, .rank-table td {
+            padding: 15px 20px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .rank-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        .rank-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .rank-table tbody tr:hover {
+            background-color: #f1f3f5;
+        }
+        .rank-table .rank-num {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .rank-table .vip-level {
+            font-style: italic;
+            color: #d63384;
+        }
     </style>
 </head>
 <body>
@@ -149,6 +185,25 @@
         <div id="online-chart-container">
             <canvas id="online-chart"></canvas>
         </div>
+
+        <div class="rank-container">
+            <h2>今日充值排行榜</h2>
+            <table class="rank-table">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>玩家名</th>
+                        <th>等级</th>
+                        <th>服务器</th>
+                        <th>VIP等级</th>
+                        <th>今日充值总额</th>
+                    </tr>
+                </thead>
+                <tbody id="pay-rank-body">
+                    <!-- Rank data will be inserted here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
@@ -157,6 +212,7 @@
         const newPlayersElem = document.getElementById('new-players');
         const payingPlayersElem = document.getElementById('paying-players');
         const totalPaymentElem = document.getElementById('total-payment');
+        const payRankBodyElem = document.getElementById('pay-rank-body');
         const ctx = document.getElementById('online-chart').getContext('2d');
 
         const gradient = ctx.createLinearGradient(0, 0, 0, 400);
@@ -295,12 +351,45 @@
             }
         }
 
+        async function fetchPayRank() {
+            try {
+                const response = await fetch('/pay_rank');
+                const result = await response.json();
+                const rankData = result.rank || [];
+                
+                payRankBodyElem.innerHTML = ''; // Clear existing rows
+
+                if (rankData.length === 0) {
+                    payRankBodyElem.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">暂无充值数据</td></tr>';
+                    return;
+                }
+
+                rankData.slice(0, 100).forEach((player, index) => {
+                    const row = `
+                        <tr>
+                            <td class="rank-num">${index + 1}</td>
+                            <td>${player.name}</td>
+                            <td>${player.level}</td>
+                            <td>${player.gamesvr}</td>
+                            <td class="vip-level">${player.viplevel}</td>
+                            <td>¥${player.money.toLocaleString()}</td>
+                        </tr>
+                    `;
+                    payRankBodyElem.innerHTML += row;
+                });
+            } catch (error) {
+                console.error('获取充值排行榜失败:', error);
+                payRankBodyElem.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red; padding: 20px;">排行榜加载失败</td></tr>';
+            }
+        }
+
         function fetchData() {
             updateDate();
             fetchActivePlayers();
             fetchNewPlayers();
             fetchPaymentData();
             fetchOnlineData();
+            fetchPayRank();
         }
 
         // Set fixed height for chart container

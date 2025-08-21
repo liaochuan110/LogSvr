@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v2"
@@ -69,8 +70,25 @@ func main() {
 		appLogger.Info("服务器启动成功")
 	}
 
+	// 启动每日0点重置缓存的定时器
+	go startDailyResetTimer()
+
 	// 使用配置文件中的端口启动服务
 	port := config.Server.Port
 	log.Printf("服务器启动在端口: %d", port)
 	r.Run(fmt.Sprintf(":%d", port))
+}
+
+// 每天0点定时重置
+func startDailyResetTimer() {
+	for {
+		// 计算下一个0点
+		now := time.Now()
+		next := now.Add(time.Hour * 24)
+		next = time.Date(next.Year(), next.Month(), next.Day(), 0, 0, 0, 0, next.Location())
+		t := time.NewTimer(next.Sub(now))
+		<-t.C
+		// 0点执行清理
+		payRankCache.ClearCache()
+	}
 }

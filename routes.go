@@ -112,6 +112,8 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	r.POST("/pay_report", func(c *gin.Context) {
 		var data struct {
 			RoleID   string `json:"roleid" form:"roleid" binding:"required"`
+			Name     string `json:"name" form:"name" binding:"required"`
+			Level    int    `json:"level" form:"level" binding:"required"`
 			GameSvr  int    `json:"gamesvr" form:"gamesvr" binding:"required"`
 			Money    int    `json:"money" form:"money" binding:"required"`
 			VipLevel int    `json:"viplevel" form:"viplevel" binding:"gte=0"`
@@ -121,6 +123,16 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+
+		// 更新支付排行榜缓存
+		payRankCache.UpdatePayInfo(&PayInfo{
+			RoleID:   data.RoleID,
+			Name:     data.Name,
+			Level:    data.Level,
+			GameSvr:  data.GameSvr,
+			Money:    data.Money,
+			VipLevel: data.VipLevel,
+		})
 
 		// 创建支付记录
 		payReport := &PayReport{
@@ -137,10 +149,17 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			return
 		}
 
-		appLogger.Info(fmt.Sprintf("支付上报成功 - RoleID: %s, 服务器: %d, 金额: %d, VIP等级: %d", data.RoleID, data.GameSvr, data.Money, data.VipLevel))
+		appLogger.Info(fmt.Sprintf("支付上报成功 - RoleID: %s, 名称: %s, 等级: %d, 服务器: %d, 金额: %d, VIP等级: %d", data.RoleID, data.Name, data.Level, data.GameSvr, data.Money, data.VipLevel))
 		c.JSON(http.StatusOK, gin.H{"status": "success"})
 	})
 	appLogger.Info("支付上报接口注册成功: POST /pay_report")
+
+	// 获取充值排行榜
+	r.GET("/pay_rank", func(c *gin.Context) {
+		rank := payRankCache.GetRank()
+		c.JSON(http.StatusOK, gin.H{"rank": rank})
+	})
+	appLogger.Info("获取充值排行榜接口注册成功: GET /pay_rank")
 
 	// 获取今天每分钟在线人数
 	r.GET("/today_online", func(c *gin.Context) {
