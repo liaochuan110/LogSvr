@@ -54,16 +54,23 @@ func main() {
 	if err != nil {
 		log.Fatalf("连接数据库失败: %v", err)
 	}
+	appLogger.Info("数据库连接成功")
 
 	// 自动迁移表结构
-	db.AutoMigrate(&OnlineNum{}, &Player{})
+	db.AutoMigrate(&OnlineNum{}, &Player{}, &PayReport{})
 
 	r := gin.Default()
 
 	// 注册接口
 	RegisterRoutes(r, db)
 
+	// 记录服务器启动日志
+	if appLogger != nil {
+		appLogger.Info("服务器启动成功")
+	}
+
 	// 使用配置文件中的端口启动服务
 	port := config.Server.Port
+	log.Printf("服务器启动在端口: %d", port)
 	r.Run(fmt.Sprintf(":%d", port))
 }
