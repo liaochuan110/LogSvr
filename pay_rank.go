@@ -1,8 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"sort"
 	"sync"
+	"time"
+
+	"gorm.io/gorm"
 )
 
 // PayInfo 存储在排行榜中的玩家支付信息
@@ -71,4 +75,41 @@ func (c *PayRankCache) ClearCache() {
 	defer c.mu.Unlock()
 	c.cache = make(map[string]*PayInfo)
 	appLogger.Info("每日充值排行榜缓存已清空")
+}
+
+// LoadTodayPayData 从数据库加载今天的支付数据来预热缓存
+func (c *PayRankCache) LoadTodayPayData(db *gorm.DB) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	now := time.Now()
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	var reports []PayReport
+	if err := db.Where("created_at >= ?", startOfDay).Order("created_at asc").Find(&reports).Error; err != nil {
+		appLogger.Error(fmt.Sprintf("从数据库加载今日充值数据失败: %v", err))
+		return
+	}
+
+	for _, report := range reports {
+		if existing, ok := c.cache[report.RoleID]; ok {
+			// 玩家存在，累加金额，更新信息
+			existing.Money += report.Money
+			existing.Name = report.Name
+			existing.Level = report.Level
+			existing.GameSvr = report.GameSvr
+			existing.VipLevel = report.VipLevel
+		} else {
+			// 玩家不存在，添加新条目
+			c.cache[report.RoleID] = &PayInfo{
+				RoleID:   report.RoleID,
+				Name:     report.Name,
+				Level:    report.Level,
+				GameSvr:  report.GameSvr,
+				Money:    report.Money,
+				VipLevel: report.VipLevel,
+			}
+		}
+	}
+	appLogger.Info(fmt.Sprintf("成功从数据库加载 %d 条今日充值记录，重建 %d 个玩家的缓存", len(reports), len(c.cache)))
 }

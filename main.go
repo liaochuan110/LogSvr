@@ -60,6 +60,9 @@ func main() {
 	// 自动迁移表结构
 	db.AutoMigrate(&OnlineNum{}, &Player{}, &PayReport{})
 
+	// 从数据库加载今日充值数据，预热缓存
+	payRankCache.LoadTodayPayData(db)
+
 	r := gin.Default()
 
 	// 注册接口

@@ -137,6 +137,8 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 		// 创建支付记录
 		payReport := &PayReport{
 			RoleID:   data.RoleID,
+			Name:     data.Name,
+			Level:    data.Level,
 			GameSvr:  data.GameSvr,
 			Money:    data.Money,
 			VipLevel: data.VipLevel,

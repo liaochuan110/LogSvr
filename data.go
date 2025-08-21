@@ -27,6 +27,8 @@ type Player struct {
 type PayReport struct {
 	gorm.Model
 	RoleID   string `gorm:"column:roleid;type:varchar(50);not null"`
+	Name     string `gorm:"column:name;type:varchar(100);not null"`
+	Level    int    `gorm:"column:level;type:int;not null"`
 	GameSvr  int    `gorm:"column:gamesvr;type:int;not null"`
 	Money    int    `gorm:"column:money;type:int;not null"`
 	VipLevel int    `gorm:"column:vip_level;type:int;not null;default:0"`
