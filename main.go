@@ -31,7 +31,7 @@ var db *gorm.DB
 
 func main() {
 	// 读取配置文件
-	configData, err := os.ReadFile("config.yaml")
+	configData, err := os.ReadFile(".config.yaml")
 	if err != nil {
 		log.Fatalf("读取配置文件失败: %v", err)
 	}
