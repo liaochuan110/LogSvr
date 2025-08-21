@@ -1,0 +1,17 @@
+database:
+  mysql:
+    host: "172.16.0.192"
+    port: 3306
+    user: "root"
+    password: "acserver123#"
+    dbname: "testdb"
+    charset: "utf8mb4"
+    parseTime: true
+    loc: "Local"
+    maxOpenConns: 100
+    maxIdleConns: 10
+    connMaxLifetime: "300s"
+
+server:
+  port: 8080
+  mode: "debug"

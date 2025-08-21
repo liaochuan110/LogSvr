@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏数据监控</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.28.0/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; text-align: center; }
+        .stats { display: flex; justify-content: space-around; margin-bottom: 30px; text-align: center; }
+        .stat-item { padding: 20px; background-color: #ecf0f1; border-radius: 5px; min-width: 200px; }
+        .stat-item h3 { margin: 0 0 10px 0; color: #7f8c8d; }
+        .stat-item p { font-size: 2em; margin: 0; color: #2980b9; }
+        #online-chart-container { width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>游戏数据实时监控</h1>
+        <div class="stats">
+            <div class="stat-item">
+                <h3>当前日期</h3>
+                <p id="current-date">--</p>
+            </div>
+            <div class="stat-item">
+                <h3>今日活跃玩家</h3>
+                <p id="active-players">--</p>
+            </div>
+        </div>
+        <h2>今日在线人数曲线</h2>
+        <div id="online-chart-container">
+            <canvas id="online-chart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const activePlayersElem = document.getElementById('active-players');
+        const currentDateElem = document.getElementById('current-date');
+        const ctx = document.getElementById('online-chart').getContext('2d');
+
+        const onlineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: '在线人数',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true,
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'hour',
+                            displayFormats: {
+                                hour: 'HH:00'
+                            },
+                            tooltipFormat: 'HH:mm'
+                        },
+                        grid: {
+                            display: true,
+                        },
+                        ticks: {
+                            source: 'auto',
+                            maxRotation: 0,
+                            minRotation: 0
+                        }
+                    },
+                    y: { 
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                if (Math.floor(value) === value) {
+                                    return value;
+                                }
+                            }
+                        }
+                    }
+                },
+                animation: false
+            }
+        });
+
+        function updateDate() {
+            const today = new Date();
+            currentDateElem.textContent = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+        }
+
+        async function fetchActivePlayers() {
+            try {
+                const response = await fetch('/getactivateplayer');
+                const data = await response.json();
+                activePlayersElem.textContent = data.active_player_count || 0;
+            } catch (error) {
+                console.error('获取活跃玩家失败:', error);
+                activePlayersElem.textContent = '获取失败';
+            }
+        }
+
+        async function fetchOnlineData() {
+            try {
+                const response = await fetch('/today_online');
+                const result = await response.json();
+                const data = result.data || [];
+                const now = new Date();
+
+                const chartData = data.map(d => ({
+                    x: new Date(d.Minute.slice(0, -1)), // Remove 'Z' to treat as local time
+                    y: d.OnlineNum
+                })).filter(d => d.x <= now) // Filter out future data points
+                  .sort((a, b) => a.x - b.x);
+
+                const today = new Date();
+                const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+                const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+                onlineChart.options.scales.x.min = startOfDay.getTime();
+                onlineChart.options.scales.x.max = endOfDay.getTime();
+                
+                onlineChart.data.datasets[0].data = chartData;
+                onlineChart.update();
+            } catch (error) {
+                console.error('获取在线数据失败:', error);
+            }
+        }
+
+        function fetchData() {
+            updateDate();
+            fetchActivePlayers();
+            fetchOnlineData();
+        }
+
+        fetchData();
+        setInterval(fetchData, 60000);
+    </script>
+</body>
+</html> 
