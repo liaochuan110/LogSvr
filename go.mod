@@ -1,6 +1,6 @@
 module gamelog
 
-go 1.24.2
+go 1.20.12
 
 require (
 	github.com/gin-gonic/gin v1.10.1
