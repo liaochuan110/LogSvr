@@ -22,10 +22,10 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	// 在线人数上报接口
 	r.POST("/onlineNum", func(c *gin.Context) {
 		var data struct {
-			GameSvrID int `json:"gamesvrID" binding:"required"`
-			OnlineNum int `json:"onlineNum" binding:"required"`
+			GameSvrID int `json:"gamesvrID" form:"gamesvrID" binding:"required"`
+			OnlineNum int `json:"onlineNum" form:"onlineNum" binding:"required"`
 		}
-		if err := c.ShouldBindJSON(&data); err != nil {
+		if err := c.ShouldBind(&data); err != nil {
 			appLogger.Error(fmt.Sprintf("在线人数上报参数错误: %v", err))
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -52,13 +52,13 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	// 玩家登录接口
 	r.POST("/user_login", func(c *gin.Context) {
 		var data struct {
-			RoleID    string `json:"roleid" binding:"required"`
-			Name      string `json:"name" binding:"required"`
-			Level     int    `json:"level" binding:"required"`
-			GameSvr   int    `json:"gamesvr" binding:"required"`
-			NewPlayer bool   `json:"new_player"`
+			RoleID    string `json:"roleid" form:"roleid" binding:"required"`
+			Name      string `json:"name" form:"name" binding:"required"`
+			Level     int    `json:"level" form:"level" binding:"required"`
+			GameSvr   int    `json:"gamesvr" form:"gamesvr" binding:"required"`
+			NewPlayer bool   `json:"new_player" form:"new_player"`
 		}
-		if err := c.ShouldBindJSON(&data); err != nil {
+		if err := c.ShouldBind(&data); err != nil {
 			appLogger.Error(fmt.Sprintf("玩家登录参数错误: %v", err))
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -111,12 +111,12 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	// 支付上报接口
 	r.POST("/pay_report", func(c *gin.Context) {
 		var data struct {
-			RoleID   string `json:"roleid" binding:"required"`
-			GameSvr  int    `json:"gamesvr" binding:"required"`
-			Money    int    `json:"money" binding:"required"`
-			VipLevel int    `json:"viplevel" binding:"required"`
+			RoleID   string `json:"roleid" form:"roleid" binding:"required"`
+			GameSvr  int    `json:"gamesvr" form:"gamesvr" binding:"required"`
+			Money    int    `json:"money" form:"money" binding:"required"`
+			VipLevel int    `json:"viplevel" form:"viplevel" binding:"required"`
 		}
-		if err := c.ShouldBindJSON(&data); err != nil {
+		if err := c.ShouldBind(&data); err != nil {
 			appLogger.Error(fmt.Sprintf("支付上报参数错误: %v", err))
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
