@@ -2,15 +2,38 @@ package main
 
 import (
 	"sync"
+	"time"
 
 	"gorm.io/gorm"
 )
+
+// DateToInt 将日期字符串转换为整型 (YYYYMMDD)
+func DateToInt(dateStr string) int {
+	if dateStr == "" {
+		return int(time.Now().Unix() / 86400 * 86400)
+	}
+
+	if t, err := time.Parse("2006-01-02", dateStr); err == nil {
+		return t.Year()*10000 + int(t.Month())*100 + t.Day()
+	}
+
+	// 如果解析失败，返回今天的日期
+	now := time.Now()
+	return now.Year()*10000 + int(now.Month())*100 + now.Day()
+}
+
+// GetCurrentDateInt 获取当前日期的整型表示
+func GetCurrentDateInt() int {
+	now := time.Now()
+	return now.Year()*10000 + int(now.Month())*100 + now.Day()
+}
 
 // OnlineNum 在线人数数据结构
 type OnlineNum struct {
 	gorm.Model
 	GameSvrID int `gorm:"column:gamesvr_id;type:int;not null"`
 	OnlineNum int `gorm:"column:online_num;type:int;not null"`
+	DateInt   int `gorm:"column:date_int;type:int;not null;index:idx_date_gamesvr"`
 }
 
 // Player 玩家数据结构
@@ -21,6 +44,7 @@ type Player struct {
 	Level     int    `gorm:"column:level;type:int;not null"`
 	GameSvr   int    `gorm:"column:gamesvr;type:int;not null"`
 	NewPlayer bool   `gorm:"column:new_player;type:bool;default:true"`
+	DateInt   int    `gorm:"column:date_int;type:int;not null;index:idx_date_gamesvr"`
 }
 
 // PayReport 支付上报数据结构
@@ -32,6 +56,7 @@ type PayReport struct {
 	GameSvr  int    `gorm:"column:gamesvr;type:int;not null"`
 	Money    int    `gorm:"column:money;type:int;not null"`
 	VipLevel int    `gorm:"column:vip_level;type:int;not null;default:0"`
+	DateInt  int    `gorm:"column:date_int;type:int;not null;index:idx_date_gamesvr"`
 }
 
 // OnlineNumCache 在线人数内存缓存

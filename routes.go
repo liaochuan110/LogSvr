@@ -35,10 +35,12 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 		// 先将数据存入内存缓存
 		onlineNumCache.SetOnlineNum(data.GameSvrID, data.OnlineNum)
 
-		// 同时存入数据库
+		// 同时存入数据库（添加date_int字段）
+		currentDateInt := GetCurrentDateInt()
 		if err := db.Create(&OnlineNum{
 			GameSvrID: data.GameSvrID,
 			OnlineNum: data.OnlineNum,
+			DateInt:   currentDateInt,
 		}).Error; err != nil {
 			appLogger.Error(fmt.Sprintf("在线人数数据写入数据库失败: %v", err))
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -81,13 +83,15 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 				"action":  "cache_update",
 			})
 		} else {
-			// 如果RoleID不在缓存中，写入数据库并缓存数据
+			// 如果RoleID不在缓存中，写入数据库并缓存数据（添加date_int字段）
+			currentDateInt := GetCurrentDateInt()
 			player := &Player{
 				RoleID:    data.RoleID,
 				Name:      data.Name,
 				Level:     data.Level,
 				GameSvr:   data.GameSvr,
 				NewPlayer: data.NewPlayer,
+				DateInt:   currentDateInt,
 			}
 
 			if err := db.Create(player).Error; err != nil {
@@ -135,7 +139,8 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			VipLevel: data.VipLevel,
 		})
 
-		// 创建支付记录
+		// 创建支付记录（添加date_int字段）
+		currentDateInt := GetCurrentDateInt()
 		payReport := &PayReport{
 			RoleID:   data.RoleID,
 			Name:     data.Name,
@@ -143,6 +148,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			GameSvr:  data.GameSvr,
 			Money:    data.Money,
 			VipLevel: data.VipLevel,
+			DateInt:  currentDateInt,
 		}
 
 		// 保存到数据库
@@ -157,38 +163,25 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	})
 	appLogger.Info("支付上报接口注册成功: POST /pay_report")
 
-	// 获取充值排行榜（支持日期和区服筛选）
+	// 获取充值排行榜（优化版：使用整型日期字段）
 	r.GET("/pay_rank", func(c *gin.Context) {
 		// 获取查询参数
 		dateParam := c.Query("date")
 		serverParam := c.Query("server")
 
-		// 处理日期参数
-		var targetDate time.Time
-		if dateParam != "" {
-			if parsed, err := time.Parse("2006-01-02", dateParam); err == nil {
-				targetDate = parsed
-			} else {
-				targetDate = time.Now().Truncate(24 * time.Hour)
-			}
-		} else {
-			targetDate = time.Now().Truncate(24 * time.Hour)
-		}
+		// 将日期转换为整型
+		dateInt := DateToInt(dateParam)
 
 		// 如果是今天且全服，直接使用缓存
-		isToday := targetDate.Format("2006-01-02") == time.Now().Format("2006-01-02")
-		if isToday && (serverParam == "" || serverParam == "0") {
+		currentDateInt := GetCurrentDateInt()
+		if dateInt == currentDateInt && (serverParam == "" || serverParam == "0") {
 			rank := payRankCache.GetRank()
 			c.JSON(http.StatusOK, gin.H{"rank": rank})
 			return
 		}
 
-		// 否则从数据库查询
-		startOfDay := targetDate
-		endOfDay := targetDate.Add(24 * time.Hour)
-
-		// 构建查询
-		query := db.Model(&PayReport{}).Where("created_at >= ? AND created_at < ?", startOfDay, endOfDay)
+		// 否则从数据库查询（使用整型日期字段）
+		query := db.Model(&PayReport{}).Where("date_int = ?", dateInt)
 
 		// 处理区服筛选
 		if serverParam != "" && serverParam != "0" {
@@ -237,28 +230,16 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	})
 	appLogger.Info("获取充值排行榜接口注册成功: GET /pay_rank")
 
-	// 获取在线人数曲线（支持日期和区服筛选）
+	// 获取在线人数曲线（优化版：使用整型日期字段）
 	r.GET("/today_online", func(c *gin.Context) {
 		// 获取查询参数
 		dateParam := c.Query("date")
 		serverParam := c.Query("server")
 
-		// 处理日期参数
-		var targetDate time.Time
-		if dateParam != "" {
-			if parsed, err := time.Parse("2006-01-02", dateParam); err == nil {
-				targetDate = parsed.UTC()
-			} else {
-				targetDate = time.Now().UTC().Truncate(24 * time.Hour)
-			}
-		} else {
-			targetDate = time.Now().UTC().Truncate(24 * time.Hour)
-		}
+		// 将日期转换为整型
+		dateInt := DateToInt(dateParam)
 
-		startOfDay := targetDate
-		endOfDay := targetDate.Add(24 * time.Hour)
-
-		// 1. 构建基础SQL查询
+		// 1. 构建基础SQL查询（使用整型日期字段）
 		baseSQL := `
 			SELECT
 				minute,
@@ -269,9 +250,9 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 					gamesvr_id,
 					MAX(online_num) as online_num
 				FROM online_num
-				WHERE created_at >= ? AND created_at <= ?`
+				WHERE date_int = ?`
 
-		args := []interface{}{startOfDay, endOfDay}
+		args := []interface{}{dateInt}
 
 		// 处理区服筛选
 		if serverParam != "" && serverParam != "0" {
@@ -314,6 +295,12 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 		}
 
 		// 4. 组装最终返回给前端的数据
+		// 根据 dateInt 构建目标日期
+		year := dateInt / 10000
+		month := (dateInt % 10000) / 100
+		day := dateInt % 100
+		startOfDay := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+
 		var finalResults []struct {
 			Minute    time.Time `json:"Minute"`
 			OnlineNum int       `json:"OnlineNum"`
@@ -336,29 +323,17 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	})
 	appLogger.Info("获取今天在线人数统计接口注册成功: GET /today_online")
 
-	// 获取活跃玩家人数（支持日期和区服筛选）
+	// 获取活跃玩家人数（优化版：使用整型日期字段）
 	r.GET("/getactivateplayer", func(c *gin.Context) {
 		// 获取查询参数
 		dateParam := c.Query("date")
 		serverParam := c.Query("server")
 
-		// 处理日期参数
-		var targetDate time.Time
-		if dateParam != "" {
-			if parsed, err := time.Parse("2006-01-02", dateParam); err == nil {
-				targetDate = parsed
-			} else {
-				targetDate = time.Now().Truncate(24 * time.Hour)
-			}
-		} else {
-			targetDate = time.Now().Truncate(24 * time.Hour)
-		}
+		// 将日期转换为整型
+		dateInt := DateToInt(dateParam)
 
-		startOfDay := targetDate
-		endOfDay := targetDate.Add(24 * time.Hour)
-
-		// 构建查询
-		query := db.Model(&Player{}).Where("created_at >= ? AND created_at < ?", startOfDay, endOfDay)
+		// 构建查询（使用整型日期字段）
+		query := db.Model(&Player{}).Where("date_int = ?", dateInt)
 
 		// 处理区服筛选
 		if serverParam != "" && serverParam != "0" {
@@ -371,29 +346,17 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	})
 	appLogger.Info("获取今天活跃玩家人数接口注册成功: GET /getactivateplayer")
 
-	// 获取新增玩家人数（支持日期和区服筛选）
+	// 获取新增玩家人数（优化版：使用整型日期字段）
 	r.GET("/getnewplayer", func(c *gin.Context) {
 		// 获取查询参数
 		dateParam := c.Query("date")
 		serverParam := c.Query("server")
 
-		// 处理日期参数
-		var targetDate time.Time
-		if dateParam != "" {
-			if parsed, err := time.Parse("2006-01-02", dateParam); err == nil {
-				targetDate = parsed
-			} else {
-				targetDate = time.Now().Truncate(24 * time.Hour)
-			}
-		} else {
-			targetDate = time.Now().Truncate(24 * time.Hour)
-		}
+		// 将日期转换为整型
+		dateInt := DateToInt(dateParam)
 
-		startOfDay := targetDate
-		endOfDay := targetDate.Add(24 * time.Hour)
-
-		// 构建查询
-		query := db.Model(&Player{}).Where("created_at >= ? AND created_at < ? AND new_player = ?", startOfDay, endOfDay, true)
+		// 构建查询（使用整型日期字段）
+		query := db.Model(&Player{}).Where("date_int = ? AND new_player = ?", dateInt, true)
 
 		// 处理区服筛选
 		if serverParam != "" && serverParam != "0" {
@@ -406,30 +369,18 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	})
 	appLogger.Info("获取今天新增玩家人数接口注册成功: GET /getnewplayer")
 
-	// 获取支付统计（支持日期和区服筛选）
+	// 获取支付统计（优化版：使用整型日期字段）
 	r.GET("/get_today_payment_stats", func(c *gin.Context) {
 		// 获取查询参数
 		dateParam := c.Query("date")
 		serverParam := c.Query("server")
 
-		// 处理日期参数
-		var targetDate time.Time
-		if dateParam != "" {
-			if parsed, err := time.Parse("2006-01-02", dateParam); err == nil {
-				targetDate = parsed
-			} else {
-				targetDate = time.Now().Truncate(24 * time.Hour)
-			}
-		} else {
-			targetDate = time.Now().Truncate(24 * time.Hour)
-		}
+		// 将日期转换为整型
+		dateInt := DateToInt(dateParam)
 
-		startOfDay := targetDate
-		endOfDay := targetDate.Add(24 * time.Hour)
-
-		// 构建查询
-		payingPlayerQuery := db.Model(&PayReport{}).Where("created_at >= ? AND created_at < ?", startOfDay, endOfDay)
-		totalPaymentQuery := db.Model(&PayReport{}).Where("created_at >= ? AND created_at < ?", startOfDay, endOfDay)
+		// 构建查询（使用整型日期字段）
+		payingPlayerQuery := db.Model(&PayReport{}).Where("date_int = ?", dateInt)
+		totalPaymentQuery := db.Model(&PayReport{}).Where("date_int = ?", dateInt)
 
 		// 处理区服筛选
 		if serverParam != "" && serverParam != "0" {
