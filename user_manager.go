@@ -15,7 +15,6 @@ type LogUser struct {
 	gorm.Model
 	Username    string     `gorm:"column:username;type:varchar(50);uniqueIndex;not null" json:"username"`
 	Password    string     `gorm:"column:password;type:varchar(64);not null" json:"-"` // 不返回到JSON
-	Email       string     `gorm:"column:email;type:varchar(100);default:''" json:"email"`
 	DisplayName string     `gorm:"column:display_name;type:varchar(100);not null" json:"display_name"`
 	IsActive    bool       `gorm:"column:is_active;type:bool;default:true" json:"is_active"`
 	LastLogin   *time.Time `gorm:"column:last_login;type:datetime" json:"last_login"`
@@ -67,7 +66,16 @@ func (um *UserManager) CreateDefaultAdmin() {
 	um.mu.Lock()
 	defer um.mu.Unlock()
 
-	// 直接创建默认管理员（因为表是新的）
+	// 检查root用户是否已经存在
+	var existingUser LogUser
+	result := um.db.Where("username = ?", "root").First(&existingUser)
+	if result.Error == nil {
+		// root用户已存在
+		appLogger.Info("默认管理员用户 root 已存在，跳过创建过程")
+		return
+	}
+
+	// root用户不存在，创建新的默认管理员
 	defaultPassword := "123456"
 	hashedPassword := HashPassword(defaultPassword)
 	appLogger.Info(fmt.Sprintf("正在创建默认管理员: 原始密码=%s, 哈希后密码=%s",
@@ -76,7 +84,6 @@ func (um *UserManager) CreateDefaultAdmin() {
 	defaultAdmin := &LogUser{
 		Username:    "root",
 		Password:    hashedPassword,
-		Email:       "admin@system.local",
 		DisplayName: "系统管理员",
 		IsActive:    true,
 	}
@@ -191,7 +198,6 @@ func (um *UserManager) CreateUser(username, password, displayName string) error 
 	newUser := &LogUser{
 		Username:    username,
 		Password:    HashPassword(password),
-		Email:       username + "@system.local", // 自动生成的email
 		DisplayName: displayName,
 		IsActive:    true,
 	}

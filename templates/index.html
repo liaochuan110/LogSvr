@@ -230,67 +230,116 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
-        .user-info {
+        .app-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        /* 用户菜单样式 */
+        .user-menu {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .user-menu-trigger {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid transparent;
         }
         
-        .user-info i {
+        .user-menu-trigger:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .user-menu-trigger i {
             font-size: 16px;
         }
         
-        .nav-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .nav-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
+        .user-menu-trigger .username {
             font-weight: 500;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .nav-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            border-color: rgba(255, 255, 255, 0.5);
-            transform: translateY(-1px);
-        }
-        
-        .logout-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
             font-size: 14px;
-            font-weight: 500;
+        }
+        
+        .user-menu-trigger .arrow {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+        
+        .user-menu.active .user-menu-trigger .arrow {
+            transform: rotate(180deg);
+        }
+        
+        /* 下拉菜单样式 */
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 5px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            min-width: 160px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
             transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            z-index: 1001;
+            border: 1px solid #e9ecef;
         }
         
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            border-color: rgba(255, 255, 255, 0.5);
-            transform: translateY(-1px);
-        }
-        
-        .logout-btn:active {
+        .user-menu.active .user-dropdown {
+            opacity: 1;
+            visibility: visible;
             transform: translateY(0);
+        }
+        
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            color: #495057;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            border-bottom: 1px solid #f8f9fa;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .dropdown-item i {
+            font-size: 14px;
+            width: 16px;
+            text-align: center;
+        }
+        
+        .dropdown-item.change-password i {
+            color: #007bff;
+        }
+        
+        .dropdown-item.user-management i {
+            color: #28a745;
+        }
+        
+        .dropdown-item.logout i {
+            color: #dc3545;
         }
         
         /* 模态框样式 */
@@ -391,23 +440,30 @@
 <body>
     <!-- 用户信息栏 -->
     <div class="user-info-bar">
-        <div class="user-info">
-            <i class="fas fa-user"></i>
-            <span id="username">root</span>
+        <div class="app-title">
+            <i class="fas fa-chart-line"></i>
+            游戏数据监控
         </div>
-        <div class="nav-buttons">
-            <a href="/users" class="nav-btn">
-                <i class="fas fa-users-cog"></i>
-                用户管理
-            </a>
-            <button id="change-password-btn" class="nav-btn">
-                <i class="fas fa-key"></i>
-                修改密码
-            </button>
-            <button id="logout-btn" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i>
-                退出登录
-            </button>
+        <div class="user-menu" id="user-menu">
+            <div class="user-menu-trigger" id="user-menu-trigger">
+                <i class="fas fa-user"></i>
+                <span class="username" id="username">root</span>
+                <i class="fas fa-chevron-down arrow"></i>
+            </div>
+            <div class="user-dropdown" id="user-dropdown">
+                <div class="dropdown-item change-password" id="change-password-btn">
+                    <i class="fas fa-key"></i>
+                    修改密码
+                </div>
+                <div class="dropdown-item user-management" id="user-management-btn" style="display: none;">
+                    <i class="fas fa-users-cog"></i>
+                    用户管理
+                </div>
+                <div class="dropdown-item logout" id="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    退出登录
+                </div>
+            </div>
         </div>
     </div>
     
@@ -763,6 +819,101 @@
             }
         }
 
+        // 用户菜单功能
+        function initUserMenu() {
+            const userMenu = document.getElementById('user-menu');
+            const userMenuTrigger = document.getElementById('user-menu-trigger');
+            const userDropdown = document.getElementById('user-dropdown');
+            const usernameElem = document.getElementById('username');
+            const userManagementBtn = document.getElementById('user-management-btn');
+            
+            if (!userMenu || !userMenuTrigger || !userDropdown) {
+                console.error('用户菜单DOM元素未找到');
+                return;
+            }
+            
+            // 点击用户菜单触发器
+            userMenuTrigger.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleUserMenu();
+            });
+            
+            // 点击页面其他地方关闭菜单
+            document.addEventListener('click', function(e) {
+                if (!userMenu.contains(e.target)) {
+                    closeUserMenu();
+                }
+            });
+            
+            // 检查当前用户是否为root，决定是否显示用户管理选项
+            checkUserPermissions();
+        }
+        
+        function toggleUserMenu() {
+            const userMenu = document.getElementById('user-menu');
+            if (userMenu) {
+                userMenu.classList.toggle('active');
+            }
+        }
+        
+        function closeUserMenu() {
+            const userMenu = document.getElementById('user-menu');
+            if (userMenu) {
+                userMenu.classList.remove('active');
+            }
+        }
+        
+        // 检查用户权限
+        async function checkUserPermissions() {
+            try {
+                // 获取当前用户信息
+                const response = await fetch('/api/current-user', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    const username = result.username || 'root';
+                    const usernameElem = document.getElementById('username');
+                    const userManagementBtn = document.getElementById('user-management-btn');
+                    
+                    // 更新用户名显示
+                    if (usernameElem) {
+                        usernameElem.textContent = username;
+                    }
+                    
+                    // 只有root用户才显示用户管理选项
+                    if (userManagementBtn) {
+                        if (username === 'root') {
+                            userManagementBtn.style.display = 'flex';
+                            console.log('当前用户为root，显示用户管理选项');
+                        } else {
+                            userManagementBtn.style.display = 'none';
+                            console.log('当前用户为' + username + '，隐藏用户管理选项');
+                        }
+                    }
+                } else {
+                    // 如果无法获取用户信息，默认为root用户
+                    console.log('无法获取用户信息，默认为root用户');
+                    const userManagementBtn = document.getElementById('user-management-btn');
+                    if (userManagementBtn) {
+                        userManagementBtn.style.display = 'flex';
+                    }
+                }
+            } catch (error) {
+                console.error('检查用户权限出错:', error);
+                // 出错时默认为root用户
+                const userManagementBtn = document.getElementById('user-management-btn');
+                if (userManagementBtn) {
+                    userManagementBtn.style.display = 'flex';
+                }
+            }
+        }
+
         // 初始化图表（增强版本）
         function initChart() {
             console.log('开始初始化图表...');
@@ -898,6 +1049,9 @@
             
             console.log('所有DOM元素检查通过');
             
+            // 初始化用户菜单功能
+            initUserMenu();
+            
             // 退出登录功能
             const logoutBtn = document.getElementById('logout-btn');
             if (logoutBtn) {
@@ -929,6 +1083,16 @@
             if (changePasswordBtn) {
                 changePasswordBtn.addEventListener('click', function() {
                     document.getElementById('password-modal').style.display = 'block';
+                    // 关闭用户菜单
+                    closeUserMenu();
+                });
+            }
+            
+            // 用户管理功能
+            const userManagementBtn = document.getElementById('user-management-btn');
+            if (userManagementBtn) {
+                userManagementBtn.addEventListener('click', function() {
+                    window.location.href = '/users';
                 });
             }
             

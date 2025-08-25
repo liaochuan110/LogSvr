@@ -575,6 +575,40 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	})
 	appLogger.Info("当前用户修改密码接口注册成功: PUT /api/current-user/password")
 
+	// 获取当前用户信息接口
+	protected.GET("/api/current-user", func(c *gin.Context) {
+		// 获取当前登录用户
+		currentUser, exists := c.Get("user")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"status":  "error",
+				"message": "获取用户信息失败",
+			})
+			return
+		}
+
+		username := currentUser.(string)
+
+		// 获取用户详细信息
+		user, exists := userManager.GetUser(username)
+		if !exists || user == nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"status":  "error",
+				"message": "用户不存在",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":       "success",
+			"username":     user.Username,
+			"display_name": user.DisplayName,
+			"is_active":    user.IsActive,
+			"created_at":   user.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	})
+	appLogger.Info("获取当前用户信息接口注册成功: GET /api/current-user")
+
 	// 停用用户
 	protected.DELETE("/api/users/:username", func(c *gin.Context) {
 		username := c.Param("username")
