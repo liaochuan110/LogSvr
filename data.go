@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -10,7 +11,8 @@ import (
 // DateToInt 将日期字符串转换为整型 (YYYYMMDD)
 func DateToInt(dateStr string) int {
 	if dateStr == "" {
-		return int(time.Now().Unix() / 86400 * 86400)
+		now := time.Now()
+		return now.Year()*10000 + int(now.Month())*100 + now.Day()
 	}
 
 	if t, err := time.Parse("2006-01-02", dateStr); err == nil {
@@ -26,6 +28,28 @@ func DateToInt(dateStr string) int {
 func GetCurrentDateInt() int {
 	now := time.Now()
 	return now.Year()*10000 + int(now.Month())*100 + now.Day()
+}
+
+// DateIntToTime 安全地将整型日期转换为time.Time，防止JSON序列化错误
+func DateIntToTime(dateInt int) (time.Time, error) {
+	year := dateInt / 10000
+	month := (dateInt % 10000) / 100
+	day := dateInt % 100
+
+	// 验证日期有效性
+	if year < 1 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31 {
+		return time.Time{}, fmt.Errorf("无效的日期: year=%d, month=%d, day=%d", year, month, day)
+	}
+
+	// 使用time.Date构建时间，它会自动规范化日期
+	t := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+
+	// 再次验证结果是否在有效范围内
+	if t.Year() < 1 || t.Year() > 9999 {
+		return time.Time{}, fmt.Errorf("日期超出有效范围: %v", t)
+	}
+
+	return t, nil
 }
 
 // OnlineNum 在线人数数据结构

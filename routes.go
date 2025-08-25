@@ -296,10 +296,12 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 
 		// 4. 组装最终返回给前端的数据
 		// 根据 dateInt 构建目标日期
-		year := dateInt / 10000
-		month := (dateInt % 10000) / 100
-		day := dateInt % 100
-		startOfDay := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+		startOfDay, err := DateIntToTime(dateInt)
+		if err != nil {
+			appLogger.Error(fmt.Sprintf("日期转换错误: %v", err))
+			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的日期参数"})
+			return
+		}
 
 		var finalResults []struct {
 			Minute    time.Time `json:"Minute"`
