@@ -28,7 +28,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 
 	// 登录页面
 	r.GET("/login", func(c *gin.Context) {
-		c.File("templates/login.html")
+		c.File("../templates/login.html")
 	})
 	appLogger.Info("登录页面路由注册成功: GET /login")
 
@@ -189,13 +189,13 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 
 	// 主页面（需要登录）
 	protected.GET("/", func(c *gin.Context) {
-		c.File("templates/index.html")
+		c.File("../templates/index.html")
 	})
 	appLogger.Info("主页面路由注册成功: GET / (需要认证)")
 
 	// 用户管理页面
 	protected.GET("/users", func(c *gin.Context) {
-		c.File("templates/user_manager.html")
+		c.File("../templates/user_manager.html")
 	})
 	appLogger.Info("用户管理页面路由注册成功: GET /users (需要认证)")
 

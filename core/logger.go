@@ -75,7 +75,7 @@ func startLogRotation() {
 // initLogger 初始化日志系统
 func initLogger() {
 	// 创建log目录
-	logDir := "log"
+	logDir := "../log"
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		panic(fmt.Sprintf("创建日志目录失败: %v", err))
 	}
