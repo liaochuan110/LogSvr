@@ -14,11 +14,31 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	// 记录路由注册开始
 	appLogger.Info("开始注册HTTP路由接口")
 
-	// 提供静态页面
-	r.GET("/", func(c *gin.Context) {
-		c.File("templates/index.html")
+	// === 公开路由（无需认证） ===
+
+	// 静态资源和常见请求处理（避免404错误）
+	r.GET("/.well-known/*path", func(c *gin.Context) {
+		// Chrome开发者工具相关请求，直接返回204避免日志噪音
+		c.Status(http.StatusNoContent)
 	})
-	appLogger.Info("静态页面路由注册成功: GET /")
+	r.GET("/favicon.ico", func(c *gin.Context) {
+		// 避免favicon.ico的404错误
+		c.Status(http.StatusNoContent)
+	})
+
+	// 登录页面
+	r.GET("/login", func(c *gin.Context) {
+		c.File("templates/login.html")
+	})
+	appLogger.Info("登录页面路由注册成功: GET /login")
+
+	// 登录接口
+	r.POST("/login", LoginHandler)
+	appLogger.Info("登录接口注册成功: POST /login")
+
+	// 退出登录接口
+	r.POST("/logout", LogoutHandler)
+	appLogger.Info("退出登录接口注册成功: POST /logout")
 
 	// 在线人数上报接口
 	r.POST("/onlineNum", func(c *gin.Context) {
@@ -163,8 +183,24 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	})
 	appLogger.Info("支付上报接口注册成功: POST /pay_report")
 
+	// === 需要认证的路由 ===
+	protected := r.Group("/")
+	protected.Use(AuthMiddleware())
+
+	// 主页面（需要登录）
+	protected.GET("/", func(c *gin.Context) {
+		c.File("templates/index.html")
+	})
+	appLogger.Info("主页面路由注册成功: GET / (需要认证)")
+
+	// 用户管理页面
+	protected.GET("/users", func(c *gin.Context) {
+		c.File("templates/user_manager.html")
+	})
+	appLogger.Info("用户管理页面路由注册成功: GET /users (需要认证)")
+
 	// 获取充值排行榜（优化版：使用整型日期字段）
-	r.GET("/pay_rank", func(c *gin.Context) {
+	protected.GET("/pay_rank", func(c *gin.Context) {
 		// 获取查询参数
 		dateParam := c.Query("date")
 		serverParam := c.Query("server")
@@ -231,7 +267,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	appLogger.Info("获取充值排行榜接口注册成功: GET /pay_rank")
 
 	// 获取在线人数曲线（优化版：使用整型日期字段）
-	r.GET("/today_online", func(c *gin.Context) {
+	protected.GET("/today_online", func(c *gin.Context) {
 		// 获取查询参数
 		dateParam := c.Query("date")
 		serverParam := c.Query("server")
@@ -326,7 +362,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	appLogger.Info("获取今天在线人数统计接口注册成功: GET /today_online")
 
 	// 获取活跃玩家人数（优化版：使用整型日期字段）
-	r.GET("/getactivateplayer", func(c *gin.Context) {
+	protected.GET("/getactivateplayer", func(c *gin.Context) {
 		// 获取查询参数
 		dateParam := c.Query("date")
 		serverParam := c.Query("server")
@@ -349,7 +385,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	appLogger.Info("获取今天活跃玩家人数接口注册成功: GET /getactivateplayer")
 
 	// 获取新增玩家人数（优化版：使用整型日期字段）
-	r.GET("/getnewplayer", func(c *gin.Context) {
+	protected.GET("/getnewplayer", func(c *gin.Context) {
 		// 获取查询参数
 		dateParam := c.Query("date")
 		serverParam := c.Query("server")
@@ -372,7 +408,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	appLogger.Info("获取今天新增玩家人数接口注册成功: GET /getnewplayer")
 
 	// 获取支付统计（优化版：使用整型日期字段）
-	r.GET("/get_today_payment_stats", func(c *gin.Context) {
+	protected.GET("/get_today_payment_stats", func(c *gin.Context) {
 		// 获取查询参数
 		dateParam := c.Query("date")
 		serverParam := c.Query("server")
@@ -402,6 +438,162 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 		})
 	})
 	appLogger.Info("获取今天支付统计接口注册成功: GET /get_today_payment_stats")
+
+	// === 用户管理接口 ===
+
+	// 创建用户
+	protected.POST("/api/users", func(c *gin.Context) {
+		var createRequest struct {
+			Username    string `json:"username" binding:"required,min=3,max=50"`
+			Password    string `json:"password" binding:"required,min=6"`
+			DisplayName string `json:"display_name" binding:"required,max=100"`
+		}
+
+		if err := c.ShouldBindJSON(&createRequest); err != nil {
+			appLogger.Error("创建用户请求参数错误: " + err.Error())
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "error",
+				"message": "请求参数错误",
+				"details": err.Error(),
+			})
+			return
+		}
+
+		err := userManager.CreateUser(createRequest.Username, createRequest.Password, createRequest.DisplayName)
+		if err != nil {
+			appLogger.Error("创建用户失败: " + err.Error())
+			c.JSON(http.StatusConflict, gin.H{
+				"status":  "error",
+				"message": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": "用户创建成功",
+		})
+	})
+	appLogger.Info("创建用户接口注册成功: POST /api/users")
+
+	// 获取用户列表
+	protected.GET("/api/users", func(c *gin.Context) {
+		users := userManager.ListUsers()
+		c.JSON(http.StatusOK, gin.H{
+			"status": "success",
+			"data":   users,
+			"count":  len(users),
+		})
+	})
+	appLogger.Info("获取用户列表接口注册成功: GET /api/users")
+
+	// 更新用户密码
+	protected.PUT("/api/users/:username/password", func(c *gin.Context) {
+		username := c.Param("username")
+		var updateRequest struct {
+			NewPassword string `json:"new_password" binding:"required,min=6"`
+		}
+
+		if err := c.ShouldBindJSON(&updateRequest); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "error",
+				"message": "请求参数错误",
+			})
+			return
+		}
+
+		err := userManager.UpdateUserPassword(username, updateRequest.NewPassword)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "error",
+				"message": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": "密码更新成功",
+		})
+	})
+	appLogger.Info("更新用户密码接口注册成功: PUT /api/users/:username/password")
+
+	// 当前用户修改自己密码的接口
+	protected.PUT("/api/current-user/password", func(c *gin.Context) {
+		var changeRequest struct {
+			CurrentPassword string `json:"current_password" binding:"required"`
+			NewPassword     string `json:"new_password" binding:"required,min=6"`
+		}
+
+		if err := c.ShouldBindJSON(&changeRequest); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "error",
+				"message": "请求参数错误",
+			})
+			return
+		}
+
+		// 获取当前登录用户
+		currentUser, exists := c.Get("user")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"status":  "error",
+				"message": "获取用户信息失败",
+			})
+			return
+		}
+
+		username := currentUser.(string)
+
+		// 验证当前密码
+		_, isValid := userManager.ValidateUser(username, changeRequest.CurrentPassword)
+		if !isValid {
+			appLogger.Warning("用户修改密码失败: 当前密码验证错误 - 用户=" + username)
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "error",
+				"message": "当前密码错误",
+			})
+			return
+		}
+
+		// 更新密码
+		err := userManager.UpdateUserPassword(username, changeRequest.NewPassword)
+		if err != nil {
+			appLogger.Error("用户修改密码失败: " + err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status":  "error",
+				"message": "密码修改失败",
+			})
+			return
+		}
+
+		appLogger.Info("用户修改密码成功: " + username)
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": "密码修改成功",
+		})
+	})
+	appLogger.Info("当前用户修改密码接口注册成功: PUT /api/current-user/password")
+
+	// 停用用户
+	protected.DELETE("/api/users/:username", func(c *gin.Context) {
+		username := c.Param("username")
+
+		err := userManager.DeactivateUser(username)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status":  "error",
+				"message": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": "用户已停用",
+		})
+	})
+	appLogger.Info("停用用户接口注册成功: DELETE /api/users/:username")
 
 	// 手动清理玩家缓存
 	r.POST("/cache/clear_players", func(c *gin.Context) {

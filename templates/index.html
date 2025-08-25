@@ -4,16 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>游戏数据监控</title>
+    <!-- 使用稳定的CDN资源 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.28.0/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <!-- 使用包含时间处理功能的Chart.js bundle版本 -->
+    <script src="https://unpkg.com/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://unpkg.com/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
             background-color: #f8f9fa;
             color: #343a40;
             margin: 0;
@@ -96,6 +94,7 @@
         }
         #online-chart-container {
             width: 100%;
+            height: 400px;
             margin-top: 30px;
             padding: 20px;
             background: #fff;
@@ -216,9 +215,202 @@
         .apply-btn:hover {
             background-color: #0056b3;
         }
+        
+        /* 用户信息栏样式 */
+        .user-info-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+        
+        .user-info i {
+            font-size: 16px;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+        }
+        
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+        }
+        
+        .logout-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: #fff;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 400px;
+            max-width: 90%;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: -10px;
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        }
+        
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+        }
+        
+        .cancel-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        .cancel-btn:hover {
+            background: #5a6268;
+        }
     </style>
 </head>
 <body>
+    <!-- 用户信息栏 -->
+    <div class="user-info-bar">
+        <div class="user-info">
+            <i class="fas fa-user"></i>
+            <span id="username">root</span>
+        </div>
+        <div class="nav-buttons">
+            <a href="/users" class="nav-btn">
+                <i class="fas fa-users-cog"></i>
+                用户管理
+            </a>
+            <button id="change-password-btn" class="nav-btn">
+                <i class="fas fa-key"></i>
+                修改密码
+            </button>
+            <button id="logout-btn" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                退出登录
+            </button>
+        </div>
+    </div>
+    
     <div class="container">
         <h1>游戏数据实时监控</h1>
         
@@ -302,82 +494,26 @@
     </div>
 
     <script>
-        const activePlayersElem = document.getElementById('active-players');
-        const currentDateElem = document.getElementById('current-date');
-        const newPlayersElem = document.getElementById('new-players');
-        const payingPlayersElem = document.getElementById('paying-players');
-        const totalPaymentElem = document.getElementById('total-payment');
-        const payRankBodyElem = document.getElementById('pay-rank-body');
-        const ctx = document.getElementById('online-chart').getContext('2d');
-
-        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, 'rgba(75, 192, 192, 0.4)');
-        gradient.addColorStop(1, 'rgba(75, 192, 192, 0)');
-
-        const onlineChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                datasets: [{
-                    label: '在线人数',
-                    data: [],
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: gradient,
-                    tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: 'rgb(75, 192, 192)',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: 'rgb(75, 192, 192)',
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'hour',
-                            displayFormats: {
-                                hour: 'HH:00'
-                            },
-                            tooltipFormat: 'HH:mm'
-                        },
-                        grid: {
-                            display: false,
-                        },
-                        ticks: {
-                            source: 'auto',
-                            maxRotation: 0,
-                            minRotation: 0,
-                            color: '#6c757d'
-                        }
-                    },
-                    y: { 
-                        beginAtZero: true,
-                        grid: {
-                            color: '#e9ecef'
-                        },
-                        ticks: {
-                            color: '#6c757d',
-                            callback: function(value) {
-                                if (Math.floor(value) === value) {
-                                    return value;
-                                }
-                            }
-                        }
-                    }
-                },
-                animation: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
+        // 定义全局变量
+        let onlineChart;
+        let currentDateElem, activePlayersElem, newPlayersElem, payingPlayersElem, totalPaymentElem, payRankBodyElem;
+                
+        // 关闭密码修改模态框
+        function closePasswordModal() {
+            document.getElementById('password-modal').style.display = 'none';
+            document.getElementById('change-password-form').reset();
+        }
+        
+        // API错误处理函数
+        function handleApiError(error, fallbackMessage = '请求失败，请稍后重试') {
+            console.error('API Error:', error);
+            if (error.status === 401) {
+                alert('登录已过期，请重新登录');
+                window.location.href = '/login';
+            } else {
+                alert(fallbackMessage);
             }
-        });
+        }
 
         // 初始化日期选择器和区服选择器
         function initFilters() {
@@ -425,9 +561,19 @@
                 if (server) params.append('server', server);
                 if (params.toString()) url += '?' + params.toString();
                 
+                console.log('获取活跃玩家数据:', url);
                 const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
-                activePlayersElem.textContent = data.active_player_count || 0;
+                console.log('活跃玩家数据响应:', data);
+                
+                const count = data.active_player_count || 0;
+                activePlayersElem.textContent = count;
+                console.log('活跃玩家数量设置为:', count);
             } catch (error) {
                 console.error('获取活跃玩家失败:', error);
                 activePlayersElem.textContent = '获取失败';
@@ -442,9 +588,19 @@
                 if (server) params.append('server', server);
                 if (params.toString()) url += '?' + params.toString();
                 
+                console.log('获取新增玩家数据:', url);
                 const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
-                newPlayersElem.textContent = data.new_player_count || 0;
+                console.log('新增玩家数据响应:', data);
+                
+                const count = data.new_player_count || 0;
+                newPlayersElem.textContent = count;
+                console.log('新增玩家数量设置为:', count);
             } catch (error) {
                 console.error('获取新增玩家失败:', error);
                 newPlayersElem.textContent = '获取失败';
@@ -459,10 +615,23 @@
                 if (server) params.append('server', server);
                 if (params.toString()) url += '?' + params.toString();
                 
+                console.log('获取支付数据:', url);
                 const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
-                payingPlayersElem.textContent = data.paying_player_count || 0;
-                totalPaymentElem.textContent = '¥' + (data.total_payment || 0).toLocaleString();
+                console.log('支付数据响应:', data);
+                
+                const payingCount = data.paying_player_count || 0;
+                const totalPayment = data.total_payment || 0;
+                
+                payingPlayersElem.textContent = payingCount;
+                totalPaymentElem.textContent = '¥' + totalPayment.toLocaleString();
+                
+                console.log('支付数据设置:', { payingCount, totalPayment });
             } catch (error) {
                 console.error('获取支付数据失败:', error);
                 payingPlayersElem.textContent = '获取失败';
@@ -478,8 +647,16 @@
                 if (server) params.append('server', server);
                 if (params.toString()) url += '?' + params.toString();
                 
+                console.log('获取在线数据:', url);
                 const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const result = await response.json();
+                console.log('在线数据响应:', result);
+                
                 const data = result.data || [];
                 
                 // 如果是查询历史数据，不过滤未来时间点
@@ -492,16 +669,23 @@
                 })).filter(d => !isToday || d.x <= now) // 只有今天的数据才过滤未来时间点
                   .sort((a, b) => a.x - b.x);
 
+                console.log('处理后的图表数据点数:', chartData.length);
+
                 // 设置图表的时间范围
                 const targetDate = date ? new Date(date) : new Date();
                 const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0);
                 const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59);
 
-                onlineChart.options.scales.x.min = startOfDay.getTime();
-                onlineChart.options.scales.x.max = endOfDay.getTime();
-                
-                onlineChart.data.datasets[0].data = chartData;
-                onlineChart.update('none'); // 'none' for no animation
+                if (onlineChart) {
+                    onlineChart.options.scales.x.min = startOfDay.getTime();
+                    onlineChart.options.scales.x.max = endOfDay.getTime();
+                    
+                    onlineChart.data.datasets[0].data = chartData;
+                    onlineChart.update(); // 恢复默认动画效果
+                    console.log('图表更新完成');
+                } else {
+                    console.error('在线图表对象不存在');
+                }
             } catch (error) {
                 console.error('获取在线数据失败:', error);
             }
@@ -515,17 +699,27 @@
                 if (server) params.append('server', server);
                 if (params.toString()) url += '?' + params.toString();
                 
+                console.log('获取充值排行榜数据:', url);
                 const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const result = await response.json();
+                console.log('充值排行榜响应:', result);
+                
                 const rankData = result.rank || [];
                 
                 payRankBodyElem.innerHTML = ''; // Clear existing rows
 
                 if (rankData.length === 0) {
                     payRankBodyElem.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">暂无充值数据</td></tr>';
+                    console.log('无充值数据');
                     return;
                 }
 
+                console.log('充值排行榜数据数量:', rankData.length);
                 rankData.slice(0, 100).forEach((player, index) => {
                     const row = `
                         <tr>
@@ -539,6 +733,7 @@
                     `;
                     payRankBodyElem.innerHTML += row;
                 });
+                console.log('充值排行榜渲染完成');
             } catch (error) {
                 console.error('获取充值排行榜失败:', error);
                 payRankBodyElem.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red; padding: 20px;">排行榜加载失败</td></tr>';
@@ -546,34 +741,352 @@
         }
 
         function fetchData(date, server) {
-            updateDate(date);
-            fetchActivePlayers(date, server);
-            fetchNewPlayers(date, server);
-            fetchPaymentData(date, server);
-            fetchOnlineData(date, server);
-            fetchPayRank(date, server);
+            console.log('开始获取数据:', { date, server });
+            
+            try {
+                updateDate(date);
+                
+                // 并发获取所有数据
+                Promise.all([
+                    fetchActivePlayers(date, server),
+                    fetchNewPlayers(date, server),
+                    fetchPaymentData(date, server),
+                    fetchOnlineData(date, server),
+                    fetchPayRank(date, server)
+                ]).then(() => {
+                    console.log('所有数据获取完成');
+                }).catch(error => {
+                    console.error('数据获取过程中出错:', error);
+                });
+            } catch (error) {
+                console.error('数据获取出错:', error);
+            }
         }
 
-        // Set fixed height for chart container
-        const chartContainer = document.getElementById('online-chart-container');
-        chartContainer.style.height = '400px';
-
-        // 初始化筛选器
-        initFilters();
-        
-        // 初始加载今天的数据
-        fetchData();
-        // 每分钟自动刷新（仅当选择的日期是今天时）
-        setInterval(() => {
-            const selectedDate = document.getElementById('date-picker').value;
-            const today = new Date().toISOString().split('T')[0];
+        // 初始化图表（增强版本）
+        function initChart() {
+            console.log('开始初始化图表...');
             
-            // 只有当选择的日期是今天时才自动刷新
-            if (selectedDate === today) {
-                const selectedServer = document.getElementById('server-select').value;
-                fetchData(selectedDate, selectedServer);
+            // 检查Chart.js是否加载完成
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js未加载，5秒后重试');
+                setTimeout(initChart, 5000);
+                return;
             }
-        }, 60000);
+            
+            console.log('Chart.js版本:', Chart.version);
+            
+            const canvas = document.getElementById('online-chart');
+            if (!canvas) {
+                console.error('找不到图表canvas元素');
+                return;
+            }
+            
+            try {
+                // 如果时间适配器不可用，使用简单的线性坐标
+                const useTimeScale = typeof Chart !== 'undefined' && Chart.registry && Chart.registry.getScale('time');
+                console.log('时间坐标轴支持:', useTimeScale);
+                
+                const scaleConfig = useTimeScale ? {
+                    type: 'time',
+                    time: {
+                        unit: 'hour',
+                        displayFormats: {
+                            hour: 'HH:mm'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: '时间'
+                    }
+                } : {
+                    type: 'category',
+                    title: {
+                        display: true,
+                        text: '时间'
+                    }
+                };
+                
+                onlineChart = new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: '在线人数',
+                            data: [],
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: scaleConfig,
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1,
+                                    callback: function(value) {
+                                        if (Number.isInteger(value)) {
+                                            return value;
+                                        }
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: '在线人数'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        }
+                    }
+                });
+                
+                console.log('图表初始化成功，使用', useTimeScale ? '时间' : '分类', '坐标轴');
+        } catch (error) {
+            console.error('图表初始化失败:', error);
+            // 如果Chart.js初始化失败，显示简单的错误信息
+            const container = document.getElementById('online-chart-container');
+            if (container) {
+                container.innerHTML = '<div style="text-align: center; padding: 50px; color: #999; font-size: 16px;">图表加载失败，请刷新页面重试</div>';
+            }
+        }
+    }
+
+        
+        // DOM加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            const startTime = performance.now();
+            console.log('DOM加载完成，开始初始化页面');
+            
+            // 检查页面加载性能
+            if (performance.timing) {
+                const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+                console.log('页面总加载时间:', loadTime + 'ms');
+            }
+            
+            // 初始化DOM元素引用
+            currentDateElem = document.getElementById('current-date');
+            activePlayersElem = document.getElementById('active-players');
+            newPlayersElem = document.getElementById('new-players');
+            payingPlayersElem = document.getElementById('paying-players');
+            totalPaymentElem = document.getElementById('total-payment');
+            payRankBodyElem = document.getElementById('pay-rank-body');
+            
+            // 检查所有必要的DOM元素是否存在
+            if (!currentDateElem || !activePlayersElem || !newPlayersElem || 
+                !payingPlayersElem || !totalPaymentElem || !payRankBodyElem) {
+                console.error('缺少必要的DOM元素');
+                console.log('DOM元素检查结果:', {
+                    currentDateElem: !!currentDateElem,
+                    activePlayersElem: !!activePlayersElem,
+                    newPlayersElem: !!newPlayersElem,
+                    payingPlayersElem: !!payingPlayersElem,
+                    totalPaymentElem: !!totalPaymentElem,
+                    payRankBodyElem: !!payRankBodyElem
+                });
+                return;
+            }
+            
+            console.log('所有DOM元素检查通过');
+            
+            // 退出登录功能
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async function() {
+                    if (confirm('确定要退出登录吗？')) {
+                        try {
+                            const response = await fetch('/logout', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            });
+                            
+                            if (response.ok) {
+                                window.location.href = '/login';
+                            } else {
+                                alert('退出登录失败，请稍后重试');
+                            }
+                        } catch (error) {
+                            console.error('Logout error:', error);
+                            alert('网络错误，请稍后重试');
+                        }
+                    }
+                });
+            }
+            
+            // 修改密码功能
+            const changePasswordBtn = document.getElementById('change-password-btn');
+            if (changePasswordBtn) {
+                changePasswordBtn.addEventListener('click', function() {
+                    document.getElementById('password-modal').style.display = 'block';
+                });
+            }
+            
+            // 关闭模态框
+            const closeBtn = document.querySelector('.close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function() {
+                    closePasswordModal();
+                });
+            }
+            
+            // 点击模态框外部关闭
+            window.addEventListener('click', function(event) {
+                const modal = document.getElementById('password-modal');
+                if (event.target === modal) {
+                    closePasswordModal();
+                }
+            });
+            
+            // 修改密码表单提交
+            const changePasswordForm = document.getElementById('change-password-form');
+            if (changePasswordForm) {
+                changePasswordForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const currentPassword = document.getElementById('current-password').value;
+                    const newPassword = document.getElementById('new-password').value;
+                    const confirmPassword = document.getElementById('confirm-password').value;
+                    
+                    // 验证新密码和确认密码是否一致
+                    if (newPassword !== confirmPassword) {
+                        alert('新密码和确认密码不一致！');
+                        return;
+                    }
+                    
+                    // 验证密码长度
+                    if (newPassword.length < 6) {
+                        alert('新密码至少需要6位字符！');
+                        return;
+                    }
+                    
+                    try {
+                        // 使用专用的当前用户修改密码接口
+                        const changeResponse = await fetch('/api/current-user/password', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ 
+                                current_password: currentPassword,
+                                new_password: newPassword 
+                            })
+                        });
+                        
+                        const result = await changeResponse.json();
+                        
+                        if (result.status === 'success') {
+                            alert('密码修改成功！');
+                            closePasswordModal();
+                            // 清空表单
+                            document.getElementById('change-password-form').reset();
+                        } else {
+                            alert(result.message || '密码修改失败！');
+                        }
+                    } catch (error) {
+                        console.error('Change password error:', error);
+                        alert('网络错误，请稍后重试！');
+                    }
+                });
+            }
+            
+            // 初始化图表
+            try {
+                console.log('开始初始化图表');
+                initChart();
+                console.log('图表初始化完成');
+            } catch (error) {
+                console.error('图表初始化失败:', error);
+            }
+            
+            // 初始化筛选器
+            try {
+                console.log('开始初始化筛选器');
+                initFilters();
+                console.log('筛选器初始化完成');
+            } catch (error) {
+                console.error('筛选器初始化失败:', error);
+            }
+            
+            // 获取当前日期和区服，然后加载数据
+            const today = new Date().toISOString().split('T')[0];
+            const defaultServer = '0'; // 默认全服
+            
+            // 初始加载今天的数据
+            console.log('开始加载初始数据:', today, defaultServer);
+            try {
+                fetchData(today, defaultServer);
+            } catch (error) {
+                console.error('初始数据加载失败:', error);
+            }
+            
+            // 每分钟自动刷新（仅当选择的日期是今天时）
+            setInterval(() => {
+                try {
+                    const datePickerElem = document.getElementById('date-picker');
+                    const serverSelectElem = document.getElementById('server-select');
+                    
+                    if (datePickerElem && serverSelectElem) {
+                        const selectedDate = datePickerElem.value;
+                        const today = new Date().toISOString().split('T')[0];
+                        
+                        // 只有当选择的日期是今天时才自动刷新
+                        if (selectedDate === today) {
+                            const selectedServer = serverSelectElem.value;
+                            console.log('自动刷新数据:', selectedDate, selectedServer);
+                            fetchData(selectedDate, selectedServer);
+                        }
+                    }
+                } catch (error) {
+                    console.error('自动刷新失败:', error);
+                }
+            }, 60000);
+            
+            // 输出初始化完成时间
+            const endTime = performance.now();
+            console.log('初始化耗时:', Math.round(endTime - startTime) + 'ms');
+        });
     </script>
+    
+    <!-- 修改密码模态框 -->
+    <div id="password-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>修改密码</h2>
+            <form id="change-password-form">
+                <div class="form-group">
+                    <label for="current-password">当前密码</label>
+                    <input type="password" id="current-password" 
+                           placeholder="请输入当前密码" required>
+                </div>
+                <div class="form-group">
+                    <label for="new-password">新密码</label>
+                    <input type="password" id="new-password" 
+                           placeholder="请输入新密码（至少6位）" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">确认新密码</label>
+                    <input type="password" id="confirm-password" 
+                           placeholder="请再次输入新密码" required>
+                </div>
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="button" onclick="closePasswordModal()" 
+                            class="cancel-btn">取消</button>
+                    <button type="submit" class="submit-btn">确定修改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </body>
 </html>
