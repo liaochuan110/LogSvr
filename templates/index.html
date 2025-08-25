@@ -43,9 +43,24 @@
         }
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            max-width: 1200px;
+            margin: 0 auto 30px auto;
             gap: 25px;
-            margin-bottom: 30px;
+        }
+        
+        /* 响应式布局：限制最大列数 */
+        @media (min-width: 768px) {
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (min-width: 1200px) {
+            .stats {
+                grid-template-columns: repeat(3, 1fr);
+                max-width: 1000px;
+            }
         }
         .stat-item {
             background-color: #ffffff;
@@ -55,6 +70,9 @@
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             display: flex;
             align-items: center;
+            min-width: 280px;
+            max-width: 320px;
+            justify-self: center;
         }
         .stat-item:hover {
             transform: translateY(-5px);
