@@ -233,7 +233,7 @@
             <div class="filter-item">
                 <label for="server-select">选择区服:</label>
                 <select id="server-select" class="server-select">
-                    <option value="all">全服</option>
+                    <option value="0">全服</option>
                 </select>
             </div>
             <button id="apply-filter" class="apply-btn">应用筛选</button>
@@ -400,23 +400,32 @@
                 const selectedDate = document.getElementById('date-picker').value;
                 const selectedServer = document.getElementById('server-select').value;
                 
-                // 这里可以添加根据选择的日期和区服筛选数据的逻辑
                 console.log('选择的日期:', selectedDate);
                 console.log('选择的区服:', selectedServer);
                 
                 // 重新获取数据
-                fetchData();
+                fetchData(selectedDate, selectedServer);
             });
         }
 
-        function updateDate() {
-            const today = new Date();
-            currentDateElem.textContent = today.getFullYear() + '-' + (today.getMonth() + 1).toString().padStart(2, '0') + '-' + today.getDate().toString().padStart(2, '0');
+        function updateDate(date) {
+            if (date) {
+                currentDateElem.textContent = date;
+            } else {
+                const today = new Date();
+                currentDateElem.textContent = today.getFullYear() + '-' + (today.getMonth() + 1).toString().padStart(2, '0') + '-' + today.getDate().toString().padStart(2, '0');
+            }
         }
 
-        async function fetchActivePlayers() {
+        async function fetchActivePlayers(date, server) {
             try {
-                const response = await fetch('/getactivateplayer');
+                let url = '/getactivateplayer';
+                const params = new URLSearchParams();
+                if (date) params.append('date', date);
+                if (server) params.append('server', server);
+                if (params.toString()) url += '?' + params.toString();
+                
+                const response = await fetch(url);
                 const data = await response.json();
                 activePlayersElem.textContent = data.active_player_count || 0;
             } catch (error) {
@@ -425,9 +434,15 @@
             }
         }
 
-        async function fetchNewPlayers() {
+        async function fetchNewPlayers(date, server) {
             try {
-                const response = await fetch('/getnewplayer');
+                let url = '/getnewplayer';
+                const params = new URLSearchParams();
+                if (date) params.append('date', date);
+                if (server) params.append('server', server);
+                if (params.toString()) url += '?' + params.toString();
+                
+                const response = await fetch(url);
                 const data = await response.json();
                 newPlayersElem.textContent = data.new_player_count || 0;
             } catch (error) {
@@ -436,9 +451,15 @@
             }
         }
 
-        async function fetchPaymentData() {
+        async function fetchPaymentData(date, server) {
             try {
-                const response = await fetch('/get_today_payment_stats');
+                let url = '/get_today_payment_stats';
+                const params = new URLSearchParams();
+                if (date) params.append('date', date);
+                if (server) params.append('server', server);
+                if (params.toString()) url += '?' + params.toString();
+                
+                const response = await fetch(url);
                 const data = await response.json();
                 payingPlayersElem.textContent = data.paying_player_count || 0;
                 totalPaymentElem.textContent = '¥' + (data.total_payment || 0).toLocaleString();
@@ -449,22 +470,32 @@
             }
         }
 
-        async function fetchOnlineData() {
+        async function fetchOnlineData(date, server) {
             try {
-                const response = await fetch('/today_online');
+                let url = '/today_online';
+                const params = new URLSearchParams();
+                if (date) params.append('date', date);
+                if (server) params.append('server', server);
+                if (params.toString()) url += '?' + params.toString();
+                
+                const response = await fetch(url);
                 const result = await response.json();
                 const data = result.data || [];
+                
+                // 如果是查询历史数据，不过滤未来时间点
+                const isToday = !date || date === new Date().toISOString().split('T')[0];
                 const now = new Date();
 
                 const chartData = data.map(d => ({
                     x: new Date(d.Minute.slice(0, -1)), // Remove 'Z' to treat as local time
                     y: d.OnlineNum
-                })).filter(d => d.x <= now) // Filter out future data points
+                })).filter(d => !isToday || d.x <= now) // 只有今天的数据才过滤未来时间点
                   .sort((a, b) => a.x - b.x);
 
-                const today = new Date();
-                const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-                const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+                // 设置图表的时间范围
+                const targetDate = date ? new Date(date) : new Date();
+                const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0);
+                const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59);
 
                 onlineChart.options.scales.x.min = startOfDay.getTime();
                 onlineChart.options.scales.x.max = endOfDay.getTime();
@@ -476,9 +507,15 @@
             }
         }
 
-        async function fetchPayRank() {
+        async function fetchPayRank(date, server) {
             try {
-                const response = await fetch('/pay_rank');
+                let url = '/pay_rank';
+                const params = new URLSearchParams();
+                if (date) params.append('date', date);
+                if (server) params.append('server', server);
+                if (params.toString()) url += '?' + params.toString();
+                
+                const response = await fetch(url);
                 const result = await response.json();
                 const rankData = result.rank || [];
                 
@@ -508,13 +545,13 @@
             }
         }
 
-        function fetchData() {
-            updateDate();
-            fetchActivePlayers();
-            fetchNewPlayers();
-            fetchPaymentData();
-            fetchOnlineData();
-            fetchPayRank();
+        function fetchData(date, server) {
+            updateDate(date);
+            fetchActivePlayers(date, server);
+            fetchNewPlayers(date, server);
+            fetchPaymentData(date, server);
+            fetchOnlineData(date, server);
+            fetchPayRank(date, server);
         }
 
         // Set fixed height for chart container
@@ -524,8 +561,19 @@
         // 初始化筛选器
         initFilters();
         
+        // 初始加载今天的数据
         fetchData();
-        setInterval(fetchData, 60000);
+        // 每分钟自动刷新（仅当选择的日期是今天时）
+        setInterval(() => {
+            const selectedDate = document.getElementById('date-picker').value;
+            const today = new Date().toISOString().split('T')[0];
+            
+            // 只有当选择的日期是今天时才自动刷新
+            if (selectedDate === today) {
+                const selectedServer = document.getElementById('server-select').value;
+                fetchData(selectedDate, selectedServer);
+            }
+        }, 60000);
     </script>
 </body>
 </html>

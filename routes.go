@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -156,41 +157,141 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	})
 	appLogger.Info("支付上报接口注册成功: POST /pay_report")
 
-	// 获取充值排行榜
+	// 获取充值排行榜（支持日期和区服筛选）
 	r.GET("/pay_rank", func(c *gin.Context) {
-		rank := payRankCache.GetRank()
+		// 获取查询参数
+		dateParam := c.Query("date")
+		serverParam := c.Query("server")
+
+		// 处理日期参数
+		var targetDate time.Time
+		if dateParam != "" {
+			if parsed, err := time.Parse("2006-01-02", dateParam); err == nil {
+				targetDate = parsed
+			} else {
+				targetDate = time.Now().Truncate(24 * time.Hour)
+			}
+		} else {
+			targetDate = time.Now().Truncate(24 * time.Hour)
+		}
+
+		// 如果是今天且全服，直接使用缓存
+		isToday := targetDate.Format("2006-01-02") == time.Now().Format("2006-01-02")
+		if isToday && (serverParam == "" || serverParam == "0") {
+			rank := payRankCache.GetRank()
+			c.JSON(http.StatusOK, gin.H{"rank": rank})
+			return
+		}
+
+		// 否则从数据库查询
+		startOfDay := targetDate
+		endOfDay := targetDate.Add(24 * time.Hour)
+
+		// 构建查询
+		query := db.Model(&PayReport{}).Where("created_at >= ? AND created_at < ?", startOfDay, endOfDay)
+
+		// 处理区服筛选
+		if serverParam != "" && serverParam != "0" {
+			query = query.Where("gamesvr = ?", serverParam)
+		}
+
+		// 查询数据库并聚合数据
+		var reports []PayReport
+		query.Order("created_at asc").Find(&reports)
+
+		// 手动聚合数据（按RoleID累加金额）
+		payInfoMap := make(map[string]*PayInfo)
+		for _, report := range reports {
+			if existing, ok := payInfoMap[report.RoleID]; ok {
+				// 玩家存在，累加金额并更新信息
+				existing.Money += report.Money
+				existing.Name = report.Name
+				existing.Level = report.Level
+				existing.GameSvr = report.GameSvr
+				existing.VipLevel = report.VipLevel
+			} else {
+				// 玩家不存在，添加新条目
+				payInfoMap[report.RoleID] = &PayInfo{
+					RoleID:   report.RoleID,
+					Name:     report.Name,
+					Level:    report.Level,
+					GameSvr:  report.GameSvr,
+					Money:    report.Money,
+					VipLevel: report.VipLevel,
+				}
+			}
+		}
+
+		// 转换为数组并排序
+		var rank []*PayInfo
+		for _, info := range payInfoMap {
+			rank = append(rank, info)
+		}
+
+		// 按金额从高到低排序
+		sort.Slice(rank, func(i, j int) bool {
+			return rank[i].Money > rank[j].Money
+		})
+
 		c.JSON(http.StatusOK, gin.H{"rank": rank})
 	})
 	appLogger.Info("获取充值排行榜接口注册成功: GET /pay_rank")
 
-	// 获取今天每分钟在线人数
+	// 获取在线人数曲线（支持日期和区服筛选）
 	r.GET("/today_online", func(c *gin.Context) {
-		// 统一使用UTC时间，避免时区问题
-		now := time.Now().UTC()
-		startOfDay := now.Truncate(24 * time.Hour)
+		// 获取查询参数
+		dateParam := c.Query("date")
+		serverParam := c.Query("server")
 
-		// 1. 查询数据库，获取每分钟的总在线人数
-		var perMinuteResults []struct {
-			Minute    string // Format: "YYYY-MM-DD HH:mm:ss"
-			OnlineNum int
+		// 处理日期参数
+		var targetDate time.Time
+		if dateParam != "" {
+			if parsed, err := time.Parse("2006-01-02", dateParam); err == nil {
+				targetDate = parsed.UTC()
+			} else {
+				targetDate = time.Now().UTC().Truncate(24 * time.Hour)
+			}
+		} else {
+			targetDate = time.Now().UTC().Truncate(24 * time.Hour)
 		}
-		db.Raw(`
+
+		startOfDay := targetDate
+		endOfDay := targetDate.Add(24 * time.Hour)
+
+		// 1. 构建基础SQL查询
+		baseSQL := `
 			SELECT
 				minute,
 				SUM(online_num) as online_num
 			FROM (
 				SELECT
-					DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:00') as minute,
+					DATE_FORMAT(created_at, '%%Y-%%m-%%d %%H:%%i:00') as minute,
 					gamesvr_id,
 					MAX(online_num) as online_num
 				FROM online_num
-				WHERE created_at >= ? AND created_at <= ?
+				WHERE created_at >= ? AND created_at <= ?`
+
+		args := []interface{}{startOfDay, endOfDay}
+
+		// 处理区服筛选
+		if serverParam != "" && serverParam != "0" {
+			baseSQL += " AND gamesvr_id = ?"
+			args = append(args, serverParam)
+		}
+
+		baseSQL += `
 				GROUP BY minute, gamesvr_id
 			) as t
-			GROUP BY minute
-		`, startOfDay, now).Scan(&perMinuteResults)
+			GROUP BY minute`
 
-		// 2. 在Go中聚合数据：计算每3分钟内的峰值
+		// 2. 查询数据库，获取每分钟的总在线人数
+		var perMinuteResults []struct {
+			Minute    string // Format: "YYYY-MM-DD HH:mm:ss"
+			OnlineNum int
+		}
+		db.Raw(baseSQL, args...).Scan(&perMinuteResults)
+
+		// 3. 在Go中聚合数据：计算每3分钟内的峰值
 		threeMinuteMap := make(map[string]int) // Key: "15:04", Value: max online num
 
 		for _, row := range perMinuteResults {
@@ -212,17 +313,17 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			}
 		}
 
-		// 3. 组装最终返回给前端的数据
+		// 4. 组装最终返回给前端的数据
 		var finalResults []struct {
 			Minute    time.Time `json:"Minute"`
 			OnlineNum int       `json:"OnlineNum"`
 		}
 		for i := 0; i < 480; i++ { // 480 = 24 * 60 / 3
-			// 生成从UTC 0点开始的每个3分钟时间点
+			// 生成从指定日期0点开始的每个3分钟时间点
 			t := startOfDay.Add(time.Duration(i*3) * time.Minute)
 			label := t.Format("15:04")
 
-			// 从map中获取这个3分钟区间的峰值
+			// 从 map中获取这个3分钟区间的峰值
 			onlineNum := threeMinuteMap[label] // 如果map中没有，默认为0
 
 			finalResults = append(finalResults, struct {
@@ -235,33 +336,112 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 	})
 	appLogger.Info("获取今天在线人数统计接口注册成功: GET /today_online")
 
-	// 获取今天活跃玩家人数
+	// 获取活跃玩家人数（支持日期和区服筛选）
 	r.GET("/getactivateplayer", func(c *gin.Context) {
+		// 获取查询参数
+		dateParam := c.Query("date")
+		serverParam := c.Query("server")
+
+		// 处理日期参数
+		var targetDate time.Time
+		if dateParam != "" {
+			if parsed, err := time.Parse("2006-01-02", dateParam); err == nil {
+				targetDate = parsed
+			} else {
+				targetDate = time.Now().Truncate(24 * time.Hour)
+			}
+		} else {
+			targetDate = time.Now().Truncate(24 * time.Hour)
+		}
+
+		startOfDay := targetDate
+		endOfDay := targetDate.Add(24 * time.Hour)
+
+		// 构建查询
+		query := db.Model(&Player{}).Where("created_at >= ? AND created_at < ?", startOfDay, endOfDay)
+
+		// 处理区服筛选
+		if serverParam != "" && serverParam != "0" {
+			query = query.Where("gamesvr = ?", serverParam)
+		}
+
 		var count int64
-		startOfDay := time.Now().Truncate(24 * time.Hour)
-		db.Model(&Player{}).Where("created_at >= ?", startOfDay).Distinct("roleid").Count(&count)
+		query.Distinct("roleid").Count(&count)
 		c.JSON(http.StatusOK, gin.H{"active_player_count": count})
 	})
 	appLogger.Info("获取今天活跃玩家人数接口注册成功: GET /getactivateplayer")
 
-	// 获取今天新增玩家人数
+	// 获取新增玩家人数（支持日期和区服筛选）
 	r.GET("/getnewplayer", func(c *gin.Context) {
+		// 获取查询参数
+		dateParam := c.Query("date")
+		serverParam := c.Query("server")
+
+		// 处理日期参数
+		var targetDate time.Time
+		if dateParam != "" {
+			if parsed, err := time.Parse("2006-01-02", dateParam); err == nil {
+				targetDate = parsed
+			} else {
+				targetDate = time.Now().Truncate(24 * time.Hour)
+			}
+		} else {
+			targetDate = time.Now().Truncate(24 * time.Hour)
+		}
+
+		startOfDay := targetDate
+		endOfDay := targetDate.Add(24 * time.Hour)
+
+		// 构建查询
+		query := db.Model(&Player{}).Where("created_at >= ? AND created_at < ? AND new_player = ?", startOfDay, endOfDay, true)
+
+		// 处理区服筛选
+		if serverParam != "" && serverParam != "0" {
+			query = query.Where("gamesvr = ?", serverParam)
+		}
+
 		var count int64
-		startOfDay := time.Now().Truncate(24 * time.Hour)
-		db.Model(&Player{}).Where("created_at >= ? AND new_player = ?", startOfDay, true).Count(&count)
+		query.Count(&count)
 		c.JSON(http.StatusOK, gin.H{"new_player_count": count})
 	})
 	appLogger.Info("获取今天新增玩家人数接口注册成功: GET /getnewplayer")
 
-	// 获取今天支付统计
+	// 获取支付统计（支持日期和区服筛选）
 	r.GET("/get_today_payment_stats", func(c *gin.Context) {
-		startOfDay := time.Now().Truncate(24 * time.Hour)
+		// 获取查询参数
+		dateParam := c.Query("date")
+		serverParam := c.Query("server")
+
+		// 处理日期参数
+		var targetDate time.Time
+		if dateParam != "" {
+			if parsed, err := time.Parse("2006-01-02", dateParam); err == nil {
+				targetDate = parsed
+			} else {
+				targetDate = time.Now().Truncate(24 * time.Hour)
+			}
+		} else {
+			targetDate = time.Now().Truncate(24 * time.Hour)
+		}
+
+		startOfDay := targetDate
+		endOfDay := targetDate.Add(24 * time.Hour)
+
+		// 构建查询
+		payingPlayerQuery := db.Model(&PayReport{}).Where("created_at >= ? AND created_at < ?", startOfDay, endOfDay)
+		totalPaymentQuery := db.Model(&PayReport{}).Where("created_at >= ? AND created_at < ?", startOfDay, endOfDay)
+
+		// 处理区服筛选
+		if serverParam != "" && serverParam != "0" {
+			payingPlayerQuery = payingPlayerQuery.Where("gamesvr = ?", serverParam)
+			totalPaymentQuery = totalPaymentQuery.Where("gamesvr = ?", serverParam)
+		}
 
 		var payingPlayerCount int64
-		db.Model(&PayReport{}).Where("created_at >= ?", startOfDay).Distinct("roleid").Count(&payingPlayerCount)
+		payingPlayerQuery.Distinct("roleid").Count(&payingPlayerCount)
 
 		var totalPayment int64
-		db.Model(&PayReport{}).Where("created_at >= ?", startOfDay).Select("coalesce(sum(money), 0)").Row().Scan(&totalPayment)
+		totalPaymentQuery.Select("coalesce(sum(money), 0)").Row().Scan(&totalPayment)
 
 		c.JSON(http.StatusOK, gin.H{
 			"paying_player_count": payingPlayerCount,
