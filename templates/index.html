@@ -139,11 +139,106 @@
             font-style: italic;
             color: #d63384;
         }
+        
+        /* 日期和区服选择样式 */
+        .filter-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .filter-item label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 80px;
+        }
+        
+        .date-picker {
+            position: relative;
+        }
+        
+        .date-input {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: #fff;
+            cursor: pointer;
+            min-width: 150px;
+        }
+        
+        .date-input:focus {
+            outline: none;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        .server-select {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: #fff;
+            cursor: pointer;
+            min-width: 120px;
+        }
+        
+        .server-select:focus {
+            outline: none;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        .apply-btn {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .apply-btn:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>游戏数据实时监控</h1>
+        
+        <!-- 日期和区服选择 -->
+        <div class="filter-section">
+            <div class="filter-item">
+                <label for="date-picker">选择日期:</label>
+                <div class="date-picker">
+                    <input type="date" id="date-picker" class="date-input" />
+                </div>
+            </div>
+            <div class="filter-item">
+                <label for="server-select">选择区服:</label>
+                <select id="server-select" class="server-select">
+                    <option value="all">全服</option>
+                </select>
+            </div>
+            <button id="apply-filter" class="apply-btn">应用筛选</button>
+        </div>
+        
         <div class="stats">
             <div class="stat-item">
                 <div class="icon icon-date"><i class="fas fa-calendar-day"></i></div>
@@ -284,6 +379,36 @@
             }
         });
 
+        // 初始化日期选择器和区服选择器
+        function initFilters() {
+            // 设置日期选择器默认为今天
+            const today = new Date();
+            const dateStr = today.getFullYear() + '-' + (today.getMonth() + 1).toString().padStart(2, '0') + '-' + today.getDate().toString().padStart(2, '0');
+            document.getElementById('date-picker').value = dateStr;
+            
+            // 初始化区服选择器
+            const serverSelect = document.getElementById('server-select');
+            for (let i = 1; i <= 50; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i + '服';
+                serverSelect.appendChild(option);
+            }
+            
+            // 绑定应用筛选按钮事件
+            document.getElementById('apply-filter').addEventListener('click', function() {
+                const selectedDate = document.getElementById('date-picker').value;
+                const selectedServer = document.getElementById('server-select').value;
+                
+                // 这里可以添加根据选择的日期和区服筛选数据的逻辑
+                console.log('选择的日期:', selectedDate);
+                console.log('选择的区服:', selectedServer);
+                
+                // 重新获取数据
+                fetchData();
+            });
+        }
+
         function updateDate() {
             const today = new Date();
             currentDateElem.textContent = today.getFullYear() + '-' + (today.getMonth() + 1).toString().padStart(2, '0') + '-' + today.getDate().toString().padStart(2, '0');
@@ -396,6 +521,9 @@
         const chartContainer = document.getElementById('online-chart-container');
         chartContainer.style.height = '400px';
 
+        // 初始化筛选器
+        initFilters();
+        
         fetchData();
         setInterval(fetchData, 60000);
     </script>
