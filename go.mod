@@ -1,12 +1,12 @@
-module gamelog
+module logsvr
 
-go 1.20.12
+go 1.20
 
 require (
 	github.com/gin-gonic/gin v1.10.1
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/mysql v1.6.0
-	gorm.io/gorm v1.30.0
+	gorm.io/gorm v1.30.1
 )
 
 require (

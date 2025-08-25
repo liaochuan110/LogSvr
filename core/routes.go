@@ -282,7 +282,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 				SUM(online_num) as online_num
 			FROM (
 				SELECT
-					DATE_FORMAT(created_at, '%%Y-%%m-%%d %%H:%%i:00') as minute,
+					DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:00') as minute,
 					gamesvr_id,
 					MAX(online_num) as online_num
 				FROM online_num
@@ -308,8 +308,8 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 		}
 		db.Raw(baseSQL, args...).Scan(&perMinuteResults)
 
-		// 3. 在Go中聚合数据：计算每3分钟内的峰值
-		threeMinuteMap := make(map[string]int) // Key: "15:04", Value: max online num
+		// 3. 在Go中聚合数据：计算每5分钟内的峰值
+		fiveMinuteMap := make(map[string]int) // Key: "15:04", Value: max online num
 
 		for _, row := range perMinuteResults {
 			// 将数据库返回的无时区时间字符串解析为UTC时间
@@ -318,15 +318,15 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 				continue // Skip if format is wrong
 			}
 
-			// 向下取整到最近的3分钟时间点 (在UTC下计算)
+			// 向下取整到最近的5分钟时间点 (在UTC下计算)
 			minute := t.Minute()
-			remainder := minute % 3
-			threeMinIntervalTime := t.Add(time.Duration(-remainder) * time.Minute)
-			label := threeMinIntervalTime.Format("15:04")
+			remainder := minute % 5
+			fiveMinIntervalTime := t.Add(time.Duration(-remainder) * time.Minute)
+			label := fiveMinIntervalTime.Format("15:04")
 
-			// 如果当前分钟的人数 > map中记录的这个3分钟区间的最大人数，则更新
-			if row.OnlineNum > threeMinuteMap[label] {
-				threeMinuteMap[label] = row.OnlineNum
+			// 如果当前分钟的人数 > map中记录的这个5分钟区间的最大人数，则更新
+			if row.OnlineNum > fiveMinuteMap[label] {
+				fiveMinuteMap[label] = row.OnlineNum
 			}
 		}
 
@@ -343,13 +343,13 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			Minute    time.Time `json:"Minute"`
 			OnlineNum int       `json:"OnlineNum"`
 		}
-		for i := 0; i < 480; i++ { // 480 = 24 * 60 / 3
-			// 生成从指定日期0点开始的每个3分钟时间点
-			t := startOfDay.Add(time.Duration(i*3) * time.Minute)
+		for i := 0; i < 288; i++ { // 288 = 24 * 60 / 5
+			// 生成从指定日期0点开始的每个5分钟时间点
+			t := startOfDay.Add(time.Duration(i*5) * time.Minute)
 			label := t.Format("15:04")
 
-			// 从 map中获取这个3分钟区间的峰值
-			onlineNum := threeMinuteMap[label] // 如果map中没有，默认为0
+			// 从 map中获取这个5分钟区间的峰值
+			onlineNum := fiveMinuteMap[label] // 如果map中没有，默认为0
 
 			finalResults = append(finalResults, struct {
 				Minute    time.Time `json:"Minute"`
