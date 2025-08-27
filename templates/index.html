@@ -571,6 +571,8 @@
         // 定义全局变量
         let onlineChart;
         let currentDateElem, activePlayersElem, newPlayersElem, payingPlayersElem, totalPaymentElem, payRankBodyElem;
+        // 添加服务器时区变量（这里假设服务器位于UTC+8时区，您可以根据实际情况修改）
+        const SERVER_TIMEZONE_OFFSET = 7; // 服务器时区偏移量（小时）
                 
         // 关闭密码修改模态框
         function closePasswordModal() {
@@ -735,12 +737,15 @@
                 
                 // 如果是查询历史数据，不过滤未来时间点
                 const isToday = !date || date === new Date().toISOString().split('T')[0];
+                // 创建服务器时区的当前时间
                 const now = new Date();
-
+                const nowUtc = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
+                const serverNow = new Date(nowUtc.getTime() + SERVER_TIMEZONE_OFFSET * 60 * 60 * 1000);
+      
                 const chartData = data.map(d => ({
                     x: new Date(d.Minute.slice(0, -1)), // Remove 'Z' to treat as local time
-                    y: d.OnlineNum
-                })).filter(d => !isToday || d.x <= now) // 只有今天的数据才过滤未来时间点
+                        y: d.OnlineNum
+                })).filter(d => !isToday || d.x <= serverNow) // 只有今天的数据才过滤未来时间点
                   .sort((a, b) => a.x - b.x);
 
                 console.log('处理后的图表数据点数:', chartData.length);
