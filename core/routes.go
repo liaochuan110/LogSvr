@@ -79,7 +79,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			Name      string `json:"name" form:"name" binding:"required"`
 			Level     int    `json:"level" form:"level" binding:"required"`
 			GameSvr   int    `json:"gamesvr" form:"gamesvr" binding:"required"`
-			NewPlayer bool   `json:"new_player" form:"new_player"`
+			NewPlayer int    `json:"new_player" form:"new_player"` // 改为int类型：0=非新玩家，1=新玩家
 		}
 		if err := c.ShouldBind(&data); err != nil {
 			appLogger.Error(fmt.Sprintf("玩家登录参数错误: %v", err))
@@ -110,7 +110,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 				Name:      data.Name,
 				Level:     data.Level,
 				GameSvr:   data.GameSvr,
-				NewPlayer: data.NewPlayer,
+				NewPlayer: data.NewPlayer == 1, // 将int转换为bool：1=true，0=false
 				DateInt:   currentDateInt,
 			}
 
