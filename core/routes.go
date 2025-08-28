@@ -96,7 +96,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			// 注意：new_player字段保持不变，不被覆盖
 			playerCache.SetPlayer(existingPlayer)
 
-			//appLogger.Info(fmt.Sprintf("玩家数据更新到缓存 - RoleID: %s, 名称: %s, 等级: %d", data.RoleID, data.Name, data.Level))
+			appLogger.Info(fmt.Sprintf("玩家数据更新到缓存 - RoleID: %s, 名称: %s, 等级: %d", data.RoleID, data.Name, data.Level))
 			c.JSON(http.StatusOK, gin.H{
 				"status":  "success",
 				"message": "玩家数据已更新到缓存",
@@ -110,7 +110,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 				Name:      data.Name,
 				Level:     data.Level,
 				GameSvr:   data.GameSvr,
-				NewPlayer: data.NewPlayer == 1, // 将int转换为bool：1=true，0=false
+				NewPlayer: data.NewPlayer,
 				DateInt:   currentDateInt,
 			}
 
@@ -123,7 +123,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB) {
 			// 缓存新创建的玩家数据
 			playerCache.SetPlayer(player)
 
-			//appLogger.Info(fmt.Sprintf("新玩家数据已写入数据库并缓存 - RoleID: %s, 名称: %s, 等级: %d, 新玩家: %t", data.RoleID, data.Name, data.Level, data.NewPlayer))
+			appLogger.Info(fmt.Sprintf("新玩家数据已写入数据库并缓存 - RoleID: %s, 名称: %s, 等级: %d, 新玩家: %d", data.RoleID, data.Name, data.Level, data.NewPlayer))
 			c.JSON(http.StatusOK, gin.H{
 				"status":  "success",
 				"message": "新玩家数据已写入数据库并缓存",

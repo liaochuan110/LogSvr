@@ -67,7 +67,7 @@ type Player struct {
 	Name      string `gorm:"column:name;type:varchar(100);not null"`
 	Level     int    `gorm:"column:level;type:int;not null"`
 	GameSvr   int    `gorm:"column:gamesvr;type:int;not null"`
-	NewPlayer bool   `gorm:"column:new_player;type:bool;default:true"`
+	NewPlayer int    `gorm:"column:new_player;type:int;default:0"`
 	DateInt   int    `gorm:"column:date_int;type:int;not null;index:idx_date_gamesvr"`
 }
 
